@@ -3,330 +3,273 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>きらきら10パズル DX</title>
+    <title>10をつくろう - 高品質版</title>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --color-1: #ffadad;
-            --color-2: #ffd6a5;
-            --color-3: #fdffb6;
-            --color-4: #caffbf;
-            --color-5: #9bf6ff;
-            --color-6: #a0c4ff;
-            --color-7: #bdb2ff;
-            --color-8: #ffc6ff;
-        }
+        /* ベース設定 */
+        body { margin: 0; padding: 0; font-family: 'Zen Maru Gothic', sans-serif; background: #f4f9f9; color: #333; touch-action: manipulation; user-select: none; }
+        .screen { display: none; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 100vh; padding: 20px; box-sizing: border-box; }
+        .screen.active { display: flex; }
+        h1 { font-size: 2.2rem; color: #2c3e50; margin-bottom: 30px; border-bottom: 4px solid #3498db; padding-bottom: 10px; }
+        button { font-family: inherit; font-weight: bold; cursor: pointer; transition: transform 0.1s; border: none; border-radius: 12px; }
+        button:active { transform: scale(0.95); }
 
-        body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            font-family: 'Zen Maru Gothic', sans-serif;
-            overflow: hidden;
-            user-select: none;
-        }
+        /* ボタンデザイン */
+        .btn-primary { background: #e74c3c; color: white; padding: 15px 40px; font-size: 1.5rem; box-shadow: 0 6px 0 #c0392b; margin: 10px; }
+        .btn-secondary { background: #3498db; color: white; padding: 15px 40px; font-size: 1.5rem; box-shadow: 0 6px 0 #2980b9; margin: 10px; }
+        .btn-level { width: 90%; max-width: 320px; padding: 20px; font-size: 1.4rem; margin: 10px 0; border-radius: 15px; color: white; display: flex; justify-content: space-between; align-items: center; }
+        .btn-level[data-level="1"] { background: #2ecc71; box-shadow: 0 6px 0 #27ae60; }
+        .btn-level[data-level="2"] { background: #f39c12; box-shadow: 0 6px 0 #e67e22; }
+        .btn-level[data-level="3"] { background: #e74c3c; box-shadow: 0 6px 0 #c0392b; }
 
-        /* 動く派手な背景 */
-        .bg-gradient {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(45deg, var(--color-1), var(--color-3), var(--color-5), var(--color-7));
-            background-size: 400% 400%;
-            animation: gradientBG 15s ease infinite;
-            z-index: -1;
-        }
+        /* ヘッダー */
+        .header { width: 100%; max-width: 500px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: white; padding: 10px 20px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); box-sizing: border-box; }
+        .timer { font-size: 1.8rem; font-weight: bold; color: #2c3e50; font-variant-numeric: tabular-nums; }
+        .btn-quit { background: #95a5a6; color: white; padding: 8px 16px; font-size: 1rem; border-radius: 8px; box-shadow: 0 4px 0 #7f8c8d; }
 
-        @keyframes gradientBG {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
+        /* グリッドレイアウト（モバイル最適化） */
+        .grid { display: grid; gap: 12px; width: 100%; max-width: 500px; justify-content: center; margin-top: 10px; }
+        .grid[data-level="1"] { grid-template-columns: repeat(3, 1fr); }
+        .grid[data-level="2"] { grid-template-columns: repeat(3, 1fr); }
+        .grid[data-level="3"] { grid-template-columns: repeat(4, 1fr); }
 
-        .screen {
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-            height: 100%;
-            text-align: center;
-        }
+        /* カードデザイン */
+        .card { background: white; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); cursor: pointer; aspect-ratio: 3/4; transition: all 0.2s; border: 3px solid #ecf0f1; }
+        .card.selected { border-color: #f1c40f; background: #fffde7; transform: translateY(-5px); box-shadow: 0 8px 15px rgba(0,0,0,0.15); }
+        .card.matched { visibility: hidden; opacity: 0; pointer-events: none; }
+        
+        /* 修正箇所：文字列によるHTML生成を廃止し、CSS Gridでドットを整列 */
+        .card-number { font-size: 2.2rem; line-height: 1; margin-bottom: 8px; }
+        .card-dots { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; align-items: center; justify-items: center; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; }
 
-        .active {
-            display: flex;
-        }
+        /* 記録・リザルト画面 */
+        .record-box { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); width: 100%; max-width: 400px; margin-bottom: 20px; }
+        .record-item { display: flex; justify-content: space-between; font-size: 1.3rem; margin: 15px 0; border-bottom: 2px dashed #bdc3c7; padding-bottom: 5px; color: #34495e; }
+        .result-text { font-size: 2.5rem; color: #e74c3c; margin-bottom: 10px; font-weight: bold; }
+        .time-text { font-size: 4rem; font-weight: bold; color: #2c3e50; margin-bottom: 20px; font-variant-numeric: tabular-nums; }
+        .new-record-badge { display: none; background: #f1c40f; color: #d35400; padding: 8px 20px; border-radius: 20px; font-size: 1.2rem; font-weight: bold; margin-bottom: 15px; animation: pop 0.6s infinite alternate; }
 
-        /* メニュー画面 */
-        .title-container h1 {
-            font-size: 4rem;
-            color: #fff;
-            text-shadow: 4px 4px 0px #ff6b6b, 8px 8px 20px rgba(0,0,0,0.2);
-            margin-bottom: 20px;
-            animation: titleWobble 2s ease-in-out infinite;
-        }
-
-        @keyframes titleWobble {
-            0%, 100% { transform: rotate(-2deg) scale(1); }
-            50% { transform: rotate(2deg) scale(1.05); }
-        }
-
-        .stats-box {
-            background: rgba(255, 255, 255, 0.8);
-            padding: 15px 30px;
-            border-radius: 50px;
-            font-size: 1.5rem;
-            margin-bottom: 40px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-        }
-
-        .btn-start {
-            padding: 20px 60px;
-            font-size: 2.5rem;
-            background: #ff6b6b;
-            color: white;
-            border: none;
-            border-radius: 50px;
-            cursor: pointer;
-            box-shadow: 0 10px 0 #ee5253;
-            transition: all 0.1s;
-        }
-
-        .btn-start:active {
-            transform: translateY(5px);
-            box-shadow: 0 5px 0 #ee5253;
-        }
-
-        /* ゲーム画面 */
-        .game-header {
-            position: absolute;
-            top: 20px;
-            width: 90%;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .btn-mini {
-            padding: 10px 20px;
-            font-size: 1rem;
-            background: rgba(255,255,255,0.5);
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-        }
-
-        .game-board {
-            display: grid;
-            grid-template-columns: repeat(6, 1fr);
-            gap: 15px;
-            max-width: 900px;
-            margin-top: 50px;
-        }
-
-        .card {
-            width: 100px;
-            height: 140px;
-            background: white;
-            border-radius: 15px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            box-shadow: 0 6px 0 #ddd;
-            transition: transform 0.2s;
-            position: relative;
-        }
-
-        .card:hover { transform: scale(1.05); }
-        .card.selected {
-            background: #fff3cd;
-            border: 4px solid #ffca28;
-            transform: translateY(-10px);
-            box-shadow: 0 16px 20px rgba(0,0,0,0.1);
-        }
-
-        .card.hidden {
-            visibility: hidden;
-            pointer-events: none;
-        }
-
-        .card-num {
-            font-size: 3rem;
-            margin-bottom: 5px;
-        }
-
-        .dots {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 4px;
-        }
-
-        .dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: #333;
-        }
-
-        /* 通知メッセージ */
-        #game-msg {
-            position: fixed;
-            bottom: 50px;
-            font-size: 2rem;
-            font-weight: bold;
-            color: #ff4757;
-            text-shadow: 2px 2px white;
-            pointer-events: none;
-        }
-
-        /* スマホ対応 */
-        @media (max-width: 600px) {
-            .game-board { grid-template-columns: repeat(3, 1fr); }
-            .card { width: 80px; height: 110px; }
-            .card-num { font-size: 2rem; }
-            .dot { width: 8px; height: 8px; }
-        }
+        @keyframes pop { from { transform: scale(1); } to { transform: scale(1.08); } }
     </style>
 </head>
 <body>
-    <div class="bg-gradient"></div>
-
     <!-- メニュー画面 -->
     <div id="screen-menu" class="screen active">
-        <div class="title-container">
-            <h1>✨きらきら 10✨</h1>
-        </div>
-        <div class="stats-box">
-            さいこうきろく：<span id="best-score">0</span> かい
-        </div>
-        <button class="btn-start" onclick="startGame()">はじめる！</button>
+        <h1>✨ 10をつくろう ✨</h1>
+        <button class="btn-primary" onclick="showScreen('screen-levels')">ゲームスタート</button>
+        <button class="btn-secondary" onclick="showScreen('screen-records')">さいこうきろく</button>
+    </div>
+
+    <!-- レベル選択画面 -->
+    <div id="screen-levels" class="screen">
+        <h1>レベルをえらぶ</h1>
+        <button class="btn-level" data-level="1" onclick="startGame(1)">
+            <span>レベル1</span><span style="font-size:1rem;">カード 6まい</span>
+        </button>
+        <button class="btn-level" data-level="2" onclick="startGame(2)">
+            <span>レベル2</span><span style="font-size:1rem;">カード 12まい</span>
+        </button>
+        <button class="btn-level" data-level="3" onclick="startGame(3)">
+            <span>レベル3</span><span style="font-size:1rem;">カード 20まい</span>
+        </button>
+        <button class="btn-secondary" style="margin-top:40px; background:#95a5a6; box-shadow: 0 6px 0 #7f8c8d;" onclick="showScreen('screen-menu')">もどる</button>
     </div>
 
     <!-- ゲーム画面 -->
     <div id="screen-game" class="screen">
-        <div class="game-header">
-            <button class="btn-mini" onclick="showMenu()">まえにもどる</button>
-            <div style="font-size: 1.5rem;">あと <span id="remaining-pairs">9</span> ペア</div>
+        <div class="header">
+            <button class="btn-quit" onclick="quitGame()">やめる</button>
+            <div class="timer" id="game-timer">00:00</div>
         </div>
-        <div id="game-board" class="game-board"></div>
-        <div id="game-msg"></div>
+        <div id="game-grid" class="grid"></div>
+    </div>
+
+    <!-- リザルト画面 -->
+    <div id="screen-result" class="screen">
+        <div class="result-text">クリア！</div>
+        <div class="new-record-badge" id="new-record-badge">🎉 しんきろく 🎉</div>
+        <div class="time-text" id="result-time">00:00</div>
+        <button class="btn-primary" onclick="showScreen('screen-levels')">つぎへ</button>
+        <button class="btn-secondary" style="background:#95a5a6; box-shadow: 0 6px 0 #7f8c8d;" onclick="showScreen('screen-menu')">メニューへ</button>
+    </div>
+
+    <!-- 記録画面 -->
+    <div id="screen-records" class="screen">
+        <h1>さいこうきろく</h1>
+        <div class="record-box">
+            <div class="record-item"><span>🌱 レベル1：</span><span id="record-lv1">--:--</span></div>
+            <div class="record-item"><span>⭐ レベル2：</span><span id="record-lv2">--:--</span></div>
+            <div class="record-item"><span>🔥 レベル3：</span><span id="record-lv3">--:--</span></div>
+        </div>
+        <button class="btn-secondary" style="background:#95a5a6; box-shadow: 0 6px 0 #7f8c8d;" onclick="showScreen('screen-menu')">もどる</button>
     </div>
 
     <script>
+        // 状態管理
+        let currentLevel = 1;
+        let timerInterval;
+        let startTime;
         let selectedCards = [];
-        let totalClears = localStorage.getItem('totalClears') || 0;
-        document.getElementById('best-score').innerText = totalClears;
+        let matchedPairs = 0;
+        let totalPairs = 0;
+        let isProcessing = false; // 連打防止
 
-        function showMenu() {
-            document.getElementById('screen-game').classList.remove('active');
-            document.getElementById('screen-menu').classList.add('active');
-            document.getElementById('best-score').innerText = totalClears;
+        // 視認性の高いカラーパレット
+        const colors = {
+            1: '#e74c3c', 2: '#e67e22', 3: '#2ecc71', 4: '#3498db', 5: '#9b59b6',
+            6: '#34495e', 7: '#1abc9c', 8: '#d35400', 9: '#c0392b'
+        };
+
+        // 初期化
+        updateRecordsDisplay();
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
         }
 
-        function startGame() {
-            document.getElementById('screen-menu').classList.remove('active');
-            document.getElementById('screen-game').classList.add('active');
-            initBoard();
-        }
-
-        function initBoard() {
-            const board = document.getElementById('game-board');
-            board.innerHTML = '';
+        function startGame(level) {
+            currentLevel = level;
             selectedCards = [];
+            matchedPairs = 0;
+            isProcessing = false;
             
-            // 1-9のペアを作成
-            let nums = [];
-            for(let i=1; i<=9; i++) {
-                nums.push(i);
-                nums.push(10-i);
-            }
-            // シャッフル
-            nums.sort(() => Math.random() - 0.5);
+            const grid = document.getElementById('game-grid');
+            grid.dataset.level = level;
+            grid.innerHTML = '';
 
-            nums.forEach((n, index) => {
+            // レベルごとの難易度調整（重複ペア含む）
+            let pairs = [];
+            if (level === 1) pairs = [[1,9], [2,8], [5,5]]; // 3ペア (6枚)
+            if (level === 2) pairs = [[1,9], [2,8], [3,7], [4,6], [5,5], [1,9]]; // 6ペア (12枚)
+            if (level === 3) pairs = [[1,9], [2,8], [3,7], [4,6], [5,5], [6,4], [7,3], [8,2], [9,1], [5,5]]; // 10ペア (20枚)
+
+            totalPairs = pairs.length;
+            let cards = [];
+            pairs.forEach(p => { cards.push(p[0], p[1]); });
+            cards.sort(() => Math.random() - 0.5); // シャッフル
+
+            // DOM要素による安全なカード生成（以前のバグ解消箇所）
+            cards.forEach((num, index) => {
                 const card = document.createElement('div');
                 card.className = 'card';
-                card.innerHTML = `
-                    <div class="card-num" style="color:${getCardColor(n)}">${n}</div>
-                    <div class="dots">${'<div class="dot" style="background:'+getCardColor(n)+'"></div>'.repeat(n)}</div>
-                `;
-                card.onclick = () => selectCard(card, n);
-                board.appendChild(card);
+                card.onclick = () => selectCard(card, num);
+
+                const numDiv = document.createElement('div');
+                numDiv.className = 'card-number';
+                numDiv.style.color = colors[num];
+                numDiv.textContent = num;
+
+                const dotsDiv = document.createElement('div');
+                dotsDiv.className = 'card-dots';
+                for(let i=0; i<num; i++){
+                    const dot = document.createElement('div');
+                    dot.className = 'dot';
+                    dot.style.backgroundColor = colors[num];
+                    dotsDiv.appendChild(dot);
+                }
+
+                card.appendChild(numDiv);
+                card.appendChild(dotsDiv);
+                grid.appendChild(card);
             });
-            updateRemaining();
+
+            document.getElementById('game-timer').textContent = "00:00";
+            showScreen('screen-game');
+            startTimer();
         }
 
-        function getCardColor(n) {
-            const colors = ['','#ff6b6b','#feca57','#1dd1a1','#48dbfb','#ff9f43','#54a0ff','#5f27cd','#ff4757','#2e86de'];
-            return colors[n];
-        }
+        function selectCard(cardElem, val) {
+            if (isProcessing) return;
+            if (cardElem.classList.contains('selected') || cardElem.classList.contains('matched')) return;
 
-        function selectCard(card, val) {
-            if (card.classList.contains('selected') || card.classList.contains('hidden')) return;
-
-            card.classList.add('selected');
-            selectedCards.push({card, val});
+            cardElem.classList.add('selected');
+            selectedCards.push({ elem: cardElem, val: val });
 
             if (selectedCards.length === 2) {
+                isProcessing = true;
                 const [c1, c2] = selectedCards;
+                
                 if (c1.val + c2.val === 10) {
-                    // 正解
+                    // 正解処理
                     setTimeout(() => {
-                        c1.card.classList.add('hidden');
-                        c2.card.classList.add('hidden');
-                        fireworks();
-                        showMsg("すごーい！ 10になった！");
-                        updateRemaining();
+                        c1.elem.classList.replace('selected', 'matched');
+                        c2.elem.classList.replace('selected', 'matched');
+                        matchedPairs++;
+                        selectedCards = [];
+                        isProcessing = false;
                         checkWin();
-                    }, 300);
+                    }, 400);
                 } else {
-                    // はずれ
+                    // 不正解処理
                     setTimeout(() => {
-                        c1.card.classList.remove('selected');
-                        c2.card.classList.remove('selected');
-                        showMsg("あとすこし！");
-                    }, 500);
+                        c1.elem.classList.remove('selected');
+                        c2.elem.classList.remove('selected');
+                        selectedCards = [];
+                        isProcessing = false;
+                    }, 800);
                 }
-                selectedCards = [];
             }
-        }
-
-        function showMsg(txt) {
-            const m = document.getElementById('game-msg');
-            m.innerText = txt;
-            setTimeout(() => { if(m.innerText === txt) m.innerText = ""; }, 1500);
-        }
-
-        function updateRemaining() {
-            const rem = document.querySelectorAll('.card:not(.hidden)').length / 2;
-            document.getElementById('remaining-pairs').innerText = rem;
         }
 
         function checkWin() {
-            const hidden = document.querySelectorAll('.card.hidden').length;
-            if (hidden === 18) {
-                totalClears++;
-                localStorage.setItem('totalClears', totalClears);
-                setTimeout(() => {
-                    alert("ぜんぶクリア！おめでとう！");
-                    showMenu();
-                }, 1000);
+            if (matchedPairs === totalPairs) {
+                clearInterval(timerInterval);
+                const timeStr = document.getElementById('game-timer').textContent;
+                const timeMs = Date.now() - startTime;
+                
+                document.getElementById('result-time').textContent = timeStr;
+                
+                // 花火エフェクト
+                confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+
+                // 記録更新チェック
+                const recordKey = `best-time-lv${currentLevel}`;
+                const bestTime = localStorage.getItem(recordKey);
+                const badge = document.getElementById('new-record-badge');
+                
+                if (!bestTime || timeMs < parseInt(bestTime)) {
+                    localStorage.setItem(recordKey, timeMs);
+                    badge.style.display = 'block';
+                } else {
+                    badge.style.display = 'none';
+                }
+                
+                updateRecordsDisplay();
+                setTimeout(() => showScreen('screen-result'), 1000);
             }
         }
 
-        function fireworks() {
-            confetti({
-                particleCount: 100,
-                spread: 70,
-                origin: { y: 0.6 },
-                colors: ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff']
-            });
+        function startTimer() {
+            clearInterval(timerInterval);
+            startTime = Date.now();
+            timerInterval = setInterval(updateTimer, 1000);
+        }
+
+        function updateTimer() {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
+            const s = String(elapsed % 60).padStart(2, '0');
+            document.getElementById('game-timer').textContent = `${m}:${s}`;
+        }
+
+        function quitGame() {
+            clearInterval(timerInterval);
+            showScreen('screen-levels');
+        }
+
+        function updateRecordsDisplay() {
+            for(let i=1; i<=3; i++){
+                const ms = localStorage.getItem(`best-time-lv${i}`);
+                if (ms) {
+                    const elapsed = Math.floor(parseInt(ms) / 1000);
+                    const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
+                    const s = String(elapsed % 60).padStart(2, '0');
+                    document.getElementById(`record-lv${i}`).textContent = `${m}:${s}`;
+                }
+            }
         }
     </script>
 </body>
