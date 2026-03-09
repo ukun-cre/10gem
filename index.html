@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>きらきら10パズル DX</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --color-1: #ffadad;
+            --color-2: #ffd6a5;
+            --color-3: #fdffb6;
+            --color-4: #caffbf;
+            --color-5: #9bf6ff;
+            --color-6: #a0c4ff;
+            --color-7: #bdb2ff;
+            --color-8: #ffc6ff;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            font-family: 'Zen Maru Gothic', sans-serif;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* 動く派手な背景 */
+        .bg-gradient {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, var(--color-1), var(--color-3), var(--color-5), var(--color-7));
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            z-index: -1;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+        }
+
+        .active {
+            display: flex;
+        }
+
+        /* メニュー画面 */
+        .title-container h1 {
+            font-size: 4rem;
+            color: #fff;
+            text-shadow: 4px 4px 0px #ff6b6b, 8px 8px 20px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+            animation: titleWobble 2s ease-in-out infinite;
+        }
+
+        @keyframes titleWobble {
+            0%, 100% { transform: rotate(-2deg) scale(1); }
+            50% { transform: rotate(2deg) scale(1.05); }
+        }
+
+        .stats-box {
+            background: rgba(255, 255, 255, 0.8);
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 1.5rem;
+            margin-bottom: 40px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        .btn-start {
+            padding: 20px 60px;
+            font-size: 2.5rem;
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 10px 0 #ee5253;
+            transition: all 0.1s;
+        }
+
+        .btn-start:active {
+            transform: translateY(5px);
+            box-shadow: 0 5px 0 #ee5253;
+        }
+
+        /* ゲーム画面 */
+        .game-header {
+            position: absolute;
+            top: 20px;
+            width: 90%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn-mini {
+            padding: 10px 20px;
+            font-size: 1rem;
+            background: rgba(255,255,255,0.5);
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 15px;
+            max-width: 900px;
+            margin-top: 50px;
+        }
+
+        .card {
+            width: 100px;
+            height: 140px;
+            background: white;
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 6px 0 #ddd;
+            transition: transform 0.2s;
+            position: relative;
+        }
+
+        .card:hover { transform: scale(1.05); }
+        .card.selected {
+            background: #fff3cd;
+            border: 4px solid #ffca28;
+            transform: translateY(-10px);
+            box-shadow: 0 16px 20px rgba(0,0,0,0.1);
+        }
+
+        .card.hidden {
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .card-num {
+            font-size: 3rem;
+            margin-bottom: 5px;
+        }
+
+        .dots {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 4px;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #333;
+        }
+
+        /* 通知メッセージ */
+        #game-msg {
+            position: fixed;
+            bottom: 50px;
+            font-size: 2rem;
+            font-weight: bold;
+            color: #ff4757;
+            text-shadow: 2px 2px white;
+            pointer-events: none;
+        }
+
+        /* スマホ対応 */
+        @media (max-width: 600px) {
+            .game-board { grid-template-columns: repeat(3, 1fr); }
+            .card { width: 80px; height: 110px; }
+            .card-num { font-size: 2rem; }
+            .dot { width: 8px; height: 8px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-gradient"></div>
+
+    <!-- メニュー画面 -->
+    <div id="screen-menu" class="screen active">
+        <div class="title-container">
+            <h1>✨きらきら 10✨</h1>
+        </div>
+        <div class="stats-box">
+            さいこうきろく：<span id="best-score">0</span> かい
+        </div>
+        <button class="btn-start" onclick="startGame()">はじめる！</button>
+    </div>
+
+    <!-- ゲーム画面 -->
+    <div id="screen-game" class="screen">
+        <div class="game-header">
+            <button class="btn-mini" onclick="showMenu()">まえにもどる</button>
+            <div style="font-size: 1.5rem;">あと <span id="remaining-pairs">9</span> ペア</div>
+        </div>
+        <div id="game-board" class="game-board"></div>
+        <div id="game-msg"></div>
+    </div>
+
+    <script>
+        let selectedCards = [];
+        let totalClears = localStorage.getItem('totalClears') || 0;
+        document.getElementById('best-score').innerText = totalClears;
+
+        function showMenu() {
+            document.getElementById('screen-game').classList.remove('active');
+            document.getElementById('screen-menu').classList.add('active');
+            document.getElementById('best-score').innerText = totalClears;
+        }
+
+        function startGame() {
+            document.getElementById('screen-menu').classList.remove('active');
+            document.getElementById('screen-game').classList.add('active');
+            initBoard();
+        }
+
+        function initBoard() {
+            const board = document.getElementById('game-board');
+            board.innerHTML = '';
+            selectedCards = [];
+            
+            // 1-9のペアを作成
+            let nums = [];
+            for(let i=1; i<=9; i++) {
+                nums.push(i);
+                nums.push(10-i);
+            }
+            // シャッフル
+            nums.sort(() => Math.random() - 0.5);
+
+            nums.forEach((n, index) => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <div class="card-num" style="color:${getCardColor(n)}">${n}</div>
+                    <div class="dots">${'<div class="dot" style="background:'+getCardColor(n)+'"></div>'.repeat(n)}</div>
+                `;
+                card.onclick = () => selectCard(card, n);
+                board.appendChild(card);
+            });
+            updateRemaining();
+        }
+
+        function getCardColor(n) {
+            const colors = ['','#ff6b6b','#feca57','#1dd1a1','#48dbfb','#ff9f43','#54a0ff','#5f27cd','#ff4757','#2e86de'];
+            return colors[n];
+        }
+
+        function selectCard(card, val) {
+            if (card.classList.contains('selected') || card.classList.contains('hidden')) return;
+
+            card.classList.add('selected');
+            selectedCards.push({card, val});
+
+            if (selectedCards.length === 2) {
+                const [c1, c2] = selectedCards;
+                if (c1.val + c2.val === 10) {
+                    // 正解
+                    setTimeout(() => {
+                        c1.card.classList.add('hidden');
+                        c2.card.classList.add('hidden');
+                        fireworks();
+                        showMsg("すごーい！ 10になった！");
+                        updateRemaining();
+                        checkWin();
+                    }, 300);
+                } else {
+                    // はずれ
+                    setTimeout(() => {
+                        c1.card.classList.remove('selected');
+                        c2.card.classList.remove('selected');
+                        showMsg("あとすこし！");
+                    }, 500);
+                }
+                selectedCards = [];
+            }
+        }
+
+        function showMsg(txt) {
+            const m = document.getElementById('game-msg');
+            m.innerText = txt;
+            setTimeout(() => { if(m.innerText === txt) m.innerText = ""; }, 1500);
+        }
+
+        function updateRemaining() {
+            const rem = document.querySelectorAll('.card:not(.hidden)').length / 2;
+            document.getElementById('remaining-pairs').innerText = rem;
+        }
+
+        function checkWin() {
+            const hidden = document.querySelectorAll('.card.hidden').length;
+            if (hidden === 18) {
+                totalClears++;
+                localStorage.setItem('totalClears', totalClears);
+                setTimeout(() => {
+                    alert("ぜんぶクリア！おめでとう！");
+                    showMenu();
+                }, 1000);
+            }
+        }
+
+        function fireworks() {
+            confetti({
+                particleCount: 100,
+                spread: 70,
+                origin: { y: 0.6 },
+                colors: ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff']
+            });
+        }
+    </script>
+</body>
+</html>
